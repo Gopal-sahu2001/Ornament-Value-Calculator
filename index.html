@@ -1,0 +1,364 @@
+from IPython.display import display, HTML
+
+# We package the entire responsive app into a sandboxed web-view inside Kaggle
+# This guarantees it remains 100% functional, responsive, and matches your visual layout
+app_html = """
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            background-color: #121212;
+            color: #E0E0E0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            padding: 20px;
+            margin: 0;
+        }
+        .container {
+            max-width: 750px;
+            margin: 0 auto;
+            background: #1A1A1A;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+        h2 {
+            font-weight: 400;
+            margin-top: 0;
+            color: #FFFFFF;
+            border-bottom: 1px solid #333;
+            padding-bottom: 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 25px;
+        }
+        th, td {
+            text-align: left;
+            padding: 10px 8px;
+            font-size: 14px;
+        }
+        th {
+            color: #888;
+            font-weight: 500;
+            border-bottom: 1px solid #333;
+        }
+        tr {
+            border-bottom: 1px solid #262626;
+        }
+        .summary-row {
+            background-color: #1E1E1E;
+            font-weight: bold;
+        }
+        .grand-total {
+            color: #FFFFFF;
+            font-size: 16px;
+        }
+        
+        /* Grid Input Panel Layout */
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            column-gap: 30px;
+            row-gap: 15px;
+            margin-top: 20px;
+            border-top: 1px solid #333;
+            padding-top: 25px;
+        }
+        .form-group {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        label {
+            font-size: 14px;
+            color: #B0B0B0;
+            width: 40%;
+        }
+        input, select {
+            width: 55%;
+            background: #242424;
+            border: 1px solid #383838;
+            color: #FFF;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        input:focus, select:focus {
+            border-color: #3F51B5;
+            outline: none;
+        }
+        
+        /* Pill Button Toggles */
+        .toggle-group {
+            display: flex;
+            width: 55%;
+            border: 1px solid #383838;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        .toggle-btn {
+            flex: 1;
+            background: #242424;
+            color: #FFF;
+            border: none;
+            padding: 8px;
+            font-size: 13px;
+            cursor: pointer;
+            text-align: center;
+        }
+        .toggle-btn.active {
+            background: #283593;
+            font-weight: bold;
+        }
+        .hidden-field {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Gold Ornament Calculator</h2>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>Particulars</th>
+                <th>Details</th>
+                <th>Amount (₹)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Gold Rate (per Gm)</td>
+                <td id="lbl-carat">22K916</td>
+                <td id="lbl-rate-per-gm">0.00</td>
+            </tr>
+            <tr>
+                <td>Weight</td>
+                <td id="lbl-weight">0.000 Gm</td>
+                <td>-</td>
+            </tr>
+            <tr>
+                <td>Making Charge (MC)</td>
+                <td id="lbl-mc-detail">Default</td>
+                <td id="lbl-mc-cost">0.00</td>
+            </tr>
+            <tr>
+                <td>Hallmark Charges</td>
+                <td id="lbl-hm-detail">2 Piece(s)</td>
+                <td id="lbl-hm-cost">150.00</td>
+            </tr>
+            <tr>
+                <td>Other Charges</td>
+                <td id="lbl-other-detail">0</td>
+                <td id="lbl-other-cost">0.00</td>
+            </tr>
+            <tr class="summary-row">
+                <td>Total Before GST</td>
+                <td>Sub-total</td>
+                <td id="lbl-subtotal">₹0.00</td>
+            </tr>
+            <tr>
+                <td>GST Amount</td>
+                <td>3%</td>
+                <td id="lbl-gst">₹0.00</td>
+            </tr>
+            <tr class="summary-row grand-total">
+                <td>Grand Total</td>
+                <td>Payable</td>
+                <td id="lbl-grandtotal">₹0.00</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="form-grid">
+        <div class="form-group">
+            <label>22K Gold Rate (10g)</label>
+            <input type="number" id="rate22k" value="72000" oninput="calculateBill()">
+        </div>
+        <div class="form-group">
+            <label>18K Gold Rate (10g)</label>
+            <input type="number" id="rate18k" value="59000" oninput="calculateBill()">
+        </div>
+        
+        <div class="form-group">
+            <label>Ornament Type</label>
+            <select id="ornamentType" onchange="calculateBill()">
+                <option value="Only gold">Only gold</option>
+                <option value="Sankha">Sankha</option>
+                <option value="Others">Others</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Pieces</label>
+            <div class="toggle-group">
+                <button id="btn-pcs-1" class="toggle-btn" onclick="setPieces(1)">1</button>
+                <button id="btn-pcs-2" class="toggle-btn active" onclick="setPieces(2)">2</button>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label>Carat</label>
+            <div class="toggle-group">
+                <button id="btn-carat-22" class="toggle-btn active" onclick="setCarat('22K916')">22K916</button>
+                <button id="btn-carat-18" class="toggle-btn" onclick="setCarat('18K750')">18K750</button>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Category</label>
+            <select id="category" onchange="calculateBill()">
+                <option value="Greater than 1Gm">Greater than 1Gm</option>
+                <option value="Less than 1gm">Less than 1gm</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label>Weight (Gm)</label>
+            <input type="number" id="weight" value="5.370" step="0.001" oninput="calculateBill()">
+        </div>
+        <div class="form-group">
+            <label>Making Charge</label>
+            <select id="mcDropdown" onchange="toggleCustomMC()">
+                <option value="default">Default</option>
+                <option value="custom">Custom</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Other Charges</label>
+            <select id="otherCharges" onchange="toggleCustomOther()">
+                <option value="0">0</option>
+                <option value="350">350</option>
+                <option value="450">450</option>
+                <option value="650">650</option>
+                <option value="1500">1500</option>
+                <option value="custom">Custom</option>
+            </select>
+        </div>
+        <div class="form-group hidden-field" id="custom-mc-block">
+            <label>Custom MC (₹)</label>
+            <input type="number" id="customMCValue" value="" placeholder="Enter Amount" oninput="calculateBill()">
+        </div>
+        
+        <div class="form-group hidden-field" id="custom-other-block">
+            <label>Custom Other (₹)</label>
+            <input type="number" id="customOtherValue" value="0" oninput="calculateBill()">
+        </div>
+    </div>
+</div>
+
+<script>
+    // Internal app state tracking
+    let selectedPieces = 2;
+    let selectedCarat = "22K916";
+
+    function setPieces(num) {
+        selectedPieces = num;
+        document.getElementById('btn-pcs-1').classList.toggle('active', num === 1);
+        document.getElementById('btn-pcs-2').classList.toggle('active', num === 2);
+        calculateBill();
+    }
+
+    function setCarat(caratStr) {
+        selectedCarat = caratStr;
+        document.getElementById('btn-carat-22').classList.toggle('active', caratStr === '22K916');
+        document.getElementById('btn-carat-18').classList.toggle('active', caratStr === '18K750');
+        calculateBill();
+    }
+
+    function toggleCustomMC() {
+        const mcDrop = document.getElementById('mcDropdown').value;
+        const mcInputBlock = document.getElementById('custom-mc-block');
+        if(mcDrop === 'custom') {
+            mcInputBlock.classList.remove('hidden-field');
+        } else {
+            mcInputBlock.classList.add('hidden-field');
+        }
+        calculateBill();
+    }
+
+    function toggleCustomOther() {
+        const otherDrop = document.getElementById('otherCharges').value;
+        const otherInputBlock = document.getElementById('custom-other-block');
+        if(otherDrop === 'custom') {
+            otherInputBlock.classList.remove('hidden-field');
+        } else {
+            otherInputBlock.classList.add('hidden-field');
+        }
+        calculateBill();
+    }
+
+    function calculateBill() {
+        // 1. Fetch values and compute rate per single gram
+        const rate10g = selectedCarat === "22K916" ? parseFloat(document.getElementById('rate22k').value) : parseFloat(document.getElementById('rate18k').value);
+        const goldRatePerGm = rate10g / 10.0;
+        
+        const weight = parseFloat(document.getElementById('weight').value) || 0;
+        const category = document.getElementById('category').value;
+        const ornamentType = document.getElementById('ornamentType').value;
+        
+        // 2. Resolve Dynamic Making Charges
+        let mc = 0;
+        const mcSelection = document.getElementById('mcDropdown').value;
+        if (mcSelection === 'default') {
+            mc = selectedCarat === "22K916" ? 1999.0 : 1499.0;
+            document.getElementById('lbl-mc-detail').innerText = "Default";
+        } else {
+            mc = parseFloat(document.getElementById('customMCValue').value) || 0;
+            document.getElementById('lbl-mc-detail').innerText = "Custom";
+        }
+
+        // 3. Resolve Hallmark Fee
+        const hmCharges = selectedPieces === 1 ? 100.0 : 150.0;
+        
+        // 4. Resolve Other Charges
+        let otherChargesValue = 0;
+        const otherSelection = document.getElementById('otherCharges').value;
+        if (otherSelection === 'custom') {
+            otherChargesValue = parseFloat(document.getElementById('customOtherValue').value) || 0;
+        } else {
+            otherChargesValue = parseFloat(otherSelection);
+        }
+
+        // 5. Execute your core split business logic formulas
+        let valueBeforeGst = 0;
+        if (category === "Greater than 1Gm") {
+            // Formula 1: ((Gold Rate + MC) * Weight) + HM + Others
+            valueBeforeGst = ((goldRatePerGm + mc) * weight) + hmCharges + otherChargesValue;
+        } else {
+            // Formula 2: (Gold Rate * Weight) + MC + HM + Others
+            valueBeforeGst = (goldRatePerGm * weight) + mc + hmCharges + otherChargesValue;
+        }
+
+        const gstAmount = valueBeforeGst * 0.03;
+        const grandTotal = valueBeforeGst + gstAmount;
+
+        // 6. Update visual receipt table interface layout
+        document.getElementById('lbl-carat').innerText = selectedCarat;
+        document.getElementById('lbl-rate-per-gm').innerText = goldRatePerGm.toFixed(2);
+        document.getElementById('lbl-weight').innerText = weight.toFixed(3) + " Gm";
+        document.getElementById('lbl-mc-cost').innerText = mc.toFixed(2);
+        document.getElementById('lbl-hm-detail').innerText = selectedPieces + " Piece(s)";
+        document.getElementById('lbl-hm-cost').innerText = hmCharges.toFixed(2);
+        document.getElementById('lbl-other-detail').innerText = otherSelection === 'custom' ? 'Custom' : otherSelection;
+        document.getElementById('lbl-other-cost').innerText = otherChargesValue.toFixed(2);
+        
+        document.getElementById('lbl-subtotal').innerText = "₹" + valueBeforeGst.toFixed(2);
+        document.getElementById('lbl-gst').innerText = "₹" + gstAmount.toFixed(2);
+        document.getElementById('lbl-grandtotal').innerText = "₹" + grandTotal.toFixed(2);
+    }
+
+    // Trigger calculation directly on window injection load
+    calculateBill();
+</script>
+
+</body>
+</html>
+"""
+
+# Render the application safely right into the user notebook output window
+display(HTML(app_html))
