@@ -1,7 +1,9 @@
-
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gold Ornament Calculator</title>
     <style>
         body {
             background-color: #121212;
@@ -52,7 +54,6 @@
             font-size: 16px;
         }
         
-        /* Grid Input Panel Layout */
         .form-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -87,7 +88,6 @@
             outline: none;
         }
         
-        /* Pill Button Toggles */
         .toggle-group {
             display: flex;
             width: 55%;
@@ -191,10 +191,7 @@
         </div>
         <div class="form-group">
             <label>Pieces</label>
-            <div class="toggle-group">
-                <button id="btn-pcs-1" class="toggle-btn" onclick="setPieces(1)">1</button>
-                <button id="btn-pcs-2" class="toggle-btn active" onclick="setPieces(2)">2</button>
-            </div>
+            <input type="number" id="piecesInput" value="2" min="1" step="1" oninput="calculateBill()">
         </div>
         
         <div class="form-group">
@@ -248,16 +245,48 @@
 </div>
 
 <script>
-    // Internal app state tracking
-    let selectedPieces = 2;
     let selectedCarat = "22K916";
 
-    function setPieces(num) {
-        selectedPieces = num;
-        document.getElementById('btn-pcs-1').classList.toggle('active', num === 1);
-        document.getElementById('btn-pcs-2').classList.toggle('active', num === 2);
-        calculateBill();
+    // --- NEW MEMORY FUNCTIONS ---
+    function saveToMemory() {
+        localStorage.setItem('rate22k', document.getElementById('rate22k').value);
+        localStorage.setItem('rate18k', document.getElementById('rate18k').value);
+        localStorage.setItem('ornamentType', document.getElementById('ornamentType').value);
+        localStorage.setItem('piecesInput', document.getElementById('piecesInput').value);
+        localStorage.setItem('selectedCarat', selectedCarat);
+        localStorage.setItem('category', document.getElementById('category').value);
+        localStorage.setItem('weight', document.getElementById('weight').value);
+        localStorage.setItem('mcDropdown', document.getElementById('mcDropdown').value);
+        localStorage.setItem('otherCharges', document.getElementById('otherCharges').value);
+        localStorage.setItem('customMCValue', document.getElementById('customMCValue').value);
+        localStorage.setItem('customOtherValue', document.getElementById('customOtherValue').value);
     }
+
+    function loadFromMemory() {
+        if(localStorage.getItem('rate22k') !== null) document.getElementById('rate22k').value = localStorage.getItem('rate22k');
+        if(localStorage.getItem('rate18k') !== null) document.getElementById('rate18k').value = localStorage.getItem('rate18k');
+        if(localStorage.getItem('ornamentType') !== null) document.getElementById('ornamentType').value = localStorage.getItem('ornamentType');
+        if(localStorage.getItem('piecesInput') !== null) document.getElementById('piecesInput').value = localStorage.getItem('piecesInput');
+        if(localStorage.getItem('category') !== null) document.getElementById('category').value = localStorage.getItem('category');
+        if(localStorage.getItem('weight') !== null) document.getElementById('weight').value = localStorage.getItem('weight');
+        if(localStorage.getItem('mcDropdown') !== null) document.getElementById('mcDropdown').value = localStorage.getItem('mcDropdown');
+        if(localStorage.getItem('otherCharges') !== null) document.getElementById('otherCharges').value = localStorage.getItem('otherCharges');
+        if(localStorage.getItem('customMCValue') !== null) document.getElementById('customMCValue').value = localStorage.getItem('customMCValue');
+        if(localStorage.getItem('customOtherValue') !== null) document.getElementById('customOtherValue').value = localStorage.getItem('customOtherValue');
+        
+        if(localStorage.getItem('selectedCarat') !== null) {
+            selectedCarat = localStorage.getItem('selectedCarat');
+        }
+        
+        // Refresh active toggle highlights
+        document.getElementById('btn-carat-22').classList.toggle('active', selectedCarat === '22K916');
+        document.getElementById('btn-carat-18').classList.toggle('active', selectedCarat === '18K750');
+        
+        // Handle custom panel disclosures
+        toggleCustomMC(false);
+        toggleCustomOther(false);
+    }
+    // ----------------------------
 
     function setCarat(caratStr) {
         selectedCarat = caratStr;
@@ -266,7 +295,7 @@
         calculateBill();
     }
 
-    function toggleCustomMC() {
+    function toggleCustomMC(shouldRecalc = true) {
         const mcDrop = document.getElementById('mcDropdown').value;
         const mcInputBlock = document.getElementById('custom-mc-block');
         if(mcDrop === 'custom') {
@@ -274,10 +303,10 @@
         } else {
             mcInputBlock.classList.add('hidden-field');
         }
-        calculateBill();
+        if(shouldRecalc) calculateBill();
     }
 
-    function toggleCustomOther() {
+    function toggleCustomOther(shouldRecalc = true) {
         const otherDrop = document.getElementById('otherCharges').value;
         const otherInputBlock = document.getElementById('custom-other-block');
         if(otherDrop === 'custom') {
@@ -285,19 +314,19 @@
         } else {
             otherInputBlock.classList.add('hidden-field');
         }
-        calculateBill();
+        if(shouldRecalc) calculateBill();
     }
 
     function calculateBill() {
-        // 1. Fetch values and compute rate per single gram
         const rate10g = selectedCarat === "22K916" ? parseFloat(document.getElementById('rate22k').value) : parseFloat(document.getElementById('rate18k').value);
         const goldRatePerGm = rate10g / 10.0;
         
         const weight = parseFloat(document.getElementById('weight').value) || 0;
         const category = document.getElementById('category').value;
-        const ornamentType = document.getElementById('ornamentType').value;
         
-        // 2. Resolve Dynamic Making Charges
+        let pieces = parseInt(document.getElementById('piecesInput').value) || 1;
+        if (pieces < 1) pieces = 1; 
+
         let mc = 0;
         const mcSelection = document.getElementById('mcDropdown').value;
         if (mcSelection === 'default') {
@@ -308,10 +337,13 @@
             document.getElementById('lbl-mc-detail').innerText = "Custom";
         }
 
-        // 3. Resolve Hallmark Fee
-        const hmCharges = selectedPieces === 1 ? 100.0 : 150.0;
+        let hmCharges = 0;
+        if (pieces === 1) {
+            hmCharges = 100.0;
+        } else {
+            hmCharges = 150.0 + ((pieces - 2) * 50.0);
+        }
         
-        // 4. Resolve Other Charges
         let otherChargesValue = 0;
         const otherSelection = document.getElementById('otherCharges').value;
         if (otherSelection === 'custom') {
@@ -320,25 +352,21 @@
             otherChargesValue = parseFloat(otherSelection);
         }
 
-        // 5. Execute your core split business logic formulas
         let valueBeforeGst = 0;
         if (category === "Greater than 1Gm") {
-            // Formula 1: ((Gold Rate + MC) * Weight) + HM + Others
             valueBeforeGst = ((goldRatePerGm + mc) * weight) + hmCharges + otherChargesValue;
         } else {
-            // Formula 2: (Gold Rate * Weight) + MC + HM + Others
             valueBeforeGst = (goldRatePerGm * weight) + mc + hmCharges + otherChargesValue;
         }
 
         const gstAmount = valueBeforeGst * 0.03;
         const grandTotal = valueBeforeGst + gstAmount;
 
-        // 6. Update visual receipt table interface layout
         document.getElementById('lbl-carat').innerText = selectedCarat;
         document.getElementById('lbl-rate-per-gm').innerText = goldRatePerGm.toFixed(2);
         document.getElementById('lbl-weight').innerText = weight.toFixed(3) + " Gm";
         document.getElementById('lbl-mc-cost').innerText = mc.toFixed(2);
-        document.getElementById('lbl-hm-detail').innerText = selectedPieces + " Piece(s)";
+        document.getElementById('lbl-hm-detail').innerText = pieces + " Piece(s)";
         document.getElementById('lbl-hm-cost').innerText = hmCharges.toFixed(2);
         document.getElementById('lbl-other-detail').innerText = otherSelection === 'custom' ? 'Custom' : otherSelection;
         document.getElementById('lbl-other-cost').innerText = otherChargesValue.toFixed(2);
@@ -346,12 +374,15 @@
         document.getElementById('lbl-subtotal').innerText = "₹" + valueBeforeGst.toFixed(2);
         document.getElementById('lbl-gst').innerText = "₹" + gstAmount.toFixed(2);
         document.getElementById('lbl-grandtotal').innerText = "₹" + grandTotal.toFixed(2);
+        
+        // Auto-save values to memory on every change
+        saveToMemory();
     }
 
-    // Trigger calculation directly on window injection load
+    // Load initial persistent data states on page load
+    loadFromMemory();
     calculateBill();
 </script>
 
 </body>
 </html>
-
