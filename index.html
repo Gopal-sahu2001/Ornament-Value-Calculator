@@ -88,26 +88,32 @@
             outline: none;
         }
         
+        /* SLEEK PILL-STYLE TOGGLE ELEMENT */
         .toggle-group {
             display: flex;
             width: 55%;
-            border: 1px solid #383838;
-            border-radius: 6px;
-            overflow: hidden;
+            background: #1E1E1E;
+            border: 1px solid #2B2B2B;
+            border-radius: 30px; /* Gives it the round capsule shape */
+            padding: 3px;
+            box-sizing: border-box;
         }
         .toggle-btn {
             flex: 1;
-            background: #242424;
-            color: #FFF;
+            background: transparent;
+            color: #8E8E93;
             border: none;
             padding: 8px;
-            font-size: 13px;
+            font-size: 14px;
+            font-weight: bold;
             cursor: pointer;
+            border-radius: 25px; /* Ensures active accent matches capsule flow */
+            transition: all 0.2s ease-in-out;
             text-align: center;
         }
         .toggle-btn.active {
-            background: #283593;
-            font-weight: bold;
+            background: #283593; /* The signature dark blue hue accent color */
+            color: #FFFFFF;
         }
         .hidden-field {
             display: none !important;
@@ -191,7 +197,10 @@
         </div>
         <div class="form-group">
             <label>Pieces</label>
-            <input type="number" id="piecesInput" value="2" min="1" step="1" oninput="calculateBill()">
+            <div class="toggle-group">
+                <button id="btn-pcs-1" class="toggle-btn" onclick="setPieces(1)">1</button>
+                <button id="btn-pcs-2" class="toggle-btn active" onclick="setPieces(2)">2</button>
+            </div>
         </div>
         
         <div class="form-group">
@@ -246,13 +255,27 @@
 
 <script>
     let selectedCarat = "22K916";
+    let selectedPieces = 2;
 
-    // --- NEW MEMORY FUNCTIONS ---
+    function setPieces(num) {
+        selectedPieces = num;
+        document.getElementById('btn-pcs-1').classList.toggle('active', num === 1);
+        document.getElementById('btn-pcs-2').classList.toggle('active', num === 2);
+        calculateBill();
+    }
+
+    function setCarat(caratStr) {
+        selectedCarat = caratStr;
+        document.getElementById('btn-carat-22').classList.toggle('active', caratStr === '22K916');
+        document.getElementById('btn-carat-18').classList.toggle('active', caratStr === '18K750');
+        calculateBill();
+    }
+
     function saveToMemory() {
         localStorage.setItem('rate22k', document.getElementById('rate22k').value);
         localStorage.setItem('rate18k', document.getElementById('rate18k').value);
         localStorage.setItem('ornamentType', document.getElementById('ornamentType').value);
-        localStorage.setItem('piecesInput', document.getElementById('piecesInput').value);
+        localStorage.setItem('selectedPieces', selectedPieces);
         localStorage.setItem('selectedCarat', selectedCarat);
         localStorage.setItem('category', document.getElementById('category').value);
         localStorage.setItem('weight', document.getElementById('weight').value);
@@ -266,7 +289,6 @@
         if(localStorage.getItem('rate22k') !== null) document.getElementById('rate22k').value = localStorage.getItem('rate22k');
         if(localStorage.getItem('rate18k') !== null) document.getElementById('rate18k').value = localStorage.getItem('rate18k');
         if(localStorage.getItem('ornamentType') !== null) document.getElementById('ornamentType').value = localStorage.getItem('ornamentType');
-        if(localStorage.getItem('piecesInput') !== null) document.getElementById('piecesInput').value = localStorage.getItem('piecesInput');
         if(localStorage.getItem('category') !== null) document.getElementById('category').value = localStorage.getItem('category');
         if(localStorage.getItem('weight') !== null) document.getElementById('weight').value = localStorage.getItem('weight');
         if(localStorage.getItem('mcDropdown') !== null) document.getElementById('mcDropdown').value = localStorage.getItem('mcDropdown');
@@ -277,22 +299,17 @@
         if(localStorage.getItem('selectedCarat') !== null) {
             selectedCarat = localStorage.getItem('selectedCarat');
         }
+        if(localStorage.getItem('selectedPieces') !== null) {
+            selectedPieces = parseInt(localStorage.getItem('selectedPieces')) || 2;
+        }
         
-        // Refresh active toggle highlights
         document.getElementById('btn-carat-22').classList.toggle('active', selectedCarat === '22K916');
         document.getElementById('btn-carat-18').classList.toggle('active', selectedCarat === '18K750');
+        document.getElementById('btn-pcs-1').classList.toggle('active', selectedPieces === 1);
+        document.getElementById('btn-pcs-2').classList.toggle('active', selectedPieces === 2);
         
-        // Handle custom panel disclosures
         toggleCustomMC(false);
         toggleCustomOther(false);
-    }
-    // ----------------------------
-
-    function setCarat(caratStr) {
-        selectedCarat = caratStr;
-        document.getElementById('btn-carat-22').classList.toggle('active', caratStr === '22K916');
-        document.getElementById('btn-carat-18').classList.toggle('active', caratStr === '18K750');
-        calculateBill();
     }
 
     function toggleCustomMC(shouldRecalc = true) {
@@ -323,9 +340,6 @@
         
         const weight = parseFloat(document.getElementById('weight').value) || 0;
         const category = document.getElementById('category').value;
-        
-        let pieces = parseInt(document.getElementById('piecesInput').value) || 1;
-        if (pieces < 1) pieces = 1; 
 
         let mc = 0;
         const mcSelection = document.getElementById('mcDropdown').value;
@@ -337,12 +351,7 @@
             document.getElementById('lbl-mc-detail').innerText = "Custom";
         }
 
-        let hmCharges = 0;
-        if (pieces === 1) {
-            hmCharges = 100.0;
-        } else {
-            hmCharges = 150.0 + ((pieces - 2) * 50.0);
-        }
+        const hmCharges = selectedPieces === 1 ? 100.0 : 150.0;
         
         let otherChargesValue = 0;
         const otherSelection = document.getElementById('otherCharges').value;
@@ -366,7 +375,7 @@
         document.getElementById('lbl-rate-per-gm').innerText = goldRatePerGm.toFixed(2);
         document.getElementById('lbl-weight').innerText = weight.toFixed(3) + " Gm";
         document.getElementById('lbl-mc-cost').innerText = mc.toFixed(2);
-        document.getElementById('lbl-hm-detail').innerText = pieces + " Piece(s)";
+        document.getElementById('lbl-hm-detail').innerText = selectedPieces + " Piece(s)";
         document.getElementById('lbl-hm-cost').innerText = hmCharges.toFixed(2);
         document.getElementById('lbl-other-detail').innerText = otherSelection === 'custom' ? 'Custom' : otherSelection;
         document.getElementById('lbl-other-cost').innerText = otherChargesValue.toFixed(2);
@@ -375,11 +384,9 @@
         document.getElementById('lbl-gst').innerText = "₹" + gstAmount.toFixed(2);
         document.getElementById('lbl-grandtotal').innerText = "₹" + grandTotal.toFixed(2);
         
-        // Auto-save values to memory on every change
         saveToMemory();
     }
 
-    // Load initial persistent data states on page load
     loadFromMemory();
     calculateBill();
 </script>
