@@ -1,8 +1,5 @@
 from IPython.display import display, HTML
 
-# We package the entire responsive app into a sandboxed web-view inside Kaggle
-# This guarantees it remains 100% functional, responsive, and matches your visual layout
-app_html = """
 <!DOCTYPE html>
 <html>
 <head>
@@ -358,7 +355,4 @@ app_html = """
 
 </body>
 </html>
-"""
 
-# Render the application safely right into the user notebook output window
-display(HTML(app_html))
